@@ -41,7 +41,9 @@ from rally import exceptions
 from rally import plugins
 from rally.task import exporter
 from rally.task.processing import plot
+from oslo_utils import importutils
 
+osprofiler_profiler = importutils.try_import("osprofiler.profiler")
 
 LOG = logging.getLogger(__name__)
 
@@ -208,11 +210,14 @@ class TaskCommands(object):
                    dest="abort_on_sla_failure",
                    help="Abort the execution of a benchmark scenario when"
                         "any SLA check for it fails.")
+    @cliutils.args("--os-profile", dest="os_profile", action="store",
+                   required=False, metavar="<hmac_key>",
+                   help="Performance profiling HMAC key for encrypting context data.")
     @envutils.with_default_deployment(cli_arg_name="deployment")
     @plugins.ensure_plugins_are_loaded
     def start(self, api, task, deployment=None, task_args=None,
               task_args_file=None, tag=None, do_use=False,
-              abort_on_sla_failure=False):
+              abort_on_sla_failure=False, os_profile=None):
         """Start benchmark task.
 
         If both task_args and task_args_file are specified, they will
@@ -237,6 +242,9 @@ class TaskCommands(object):
         """
 
         try:
+            if (os_profile is not None):
+                osprofiler_profiler.init(os_profile)
+
             task_instance = api.task.create(deployment, tag)
 
             print("Running Rally version", version.version_string())
@@ -258,6 +266,11 @@ class TaskCommands(object):
             api.task.start(deployment, input_task, task=task_instance,
                            abort_on_sla_failure=abort_on_sla_failure)
             self.detailed(api, task_id=task_instance["uuid"])
+
+            if (os_profile is not None):
+                print("Display trace with command:\n"
+                      "osprofiler trace show --html",
+                      osprofiler_profiler.get().get_base_id())
 
         except exceptions.DeploymentNotFinishedStatus as e:
             print(_("Cannot start a task on unfinished deployment: %s") % e)
