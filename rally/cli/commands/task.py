@@ -239,10 +239,11 @@ class TaskCommands(object):
         :param abort_on_sla_failure: if True, the execution of a benchmark
                                      scenario will stop when any SLA check
                                      for it fails
+        :param os_profile: use a secret key to sign trace information
         """
 
         try:
-            if (os_profile is not None):
+            if os_profile is not None:
                 osprofiler_profiler.init(os_profile)
 
             task_instance = api.task.create(deployment, tag)
@@ -267,7 +268,7 @@ class TaskCommands(object):
                            abort_on_sla_failure=abort_on_sla_failure)
             self.detailed(api, task_id=task_instance["uuid"])
 
-            if (os_profile is not None):
+            if os_profile is not None:
                 print("Display trace with command:\n"
                       "osprofiler trace show --html",
                       osprofiler_profiler.get().get_base_id())
